@@ -100,7 +100,7 @@ jobs:
           9.0.x
 
     - name: Download artifacts
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v6
       with:
         name: nuget-package-ubuntu-latest
         path: ./artifacts
