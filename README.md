@@ -10,34 +10,18 @@ A production-ready .NET template that creates a console application with xUnit v
 
 ## Features
 
-- ✅ Console application in `src/App`
-- ✅ xUnit v3 test project in `tests/App.Tests`
-- ✅ Solution file with both projects configured
+- ✅ Console application with sample code
+- ✅ xUnit v3 test project with examples
+- ✅ Solution file linking both projects
 - ✅ Microsoft Testing Platform integration
-- ✅ Sample unit tests with Theory and Fact attributes
-- ✅ Project references properly configured
-- ✅ .NET 10 support (with options for .NET 9 and .NET 8)
+- ✅ Sample tests demonstrating Fact and Theory patterns
+- ✅ Support for .NET 10 (default), .NET 9, and .NET 8
 
 ## Installation
-
-### Install from NuGet (Recommended)
 
 ```bash
 dotnet new install console-with-tests
 ```
-
-### Install from GitHub
-
-1. **Clone and install locally:**
-   ```bash
-   git clone https://github.com/mrviduus/ConsoleWithTests.Template.git
-   dotnet new install ./ConsoleWithTests.Template
-   ```
-
-2. **Or install directly from GitHub release:**
-   ```bash
-   dotnet new install mrviduus/ConsoleWithTests.Template::main
-   ```
 
 ## Usage
 
@@ -47,41 +31,36 @@ dotnet new install console-with-tests
 dotnet new console-with-tests -n MyProject
 ```
 
-This will create the following structure:
+This creates:
 
 ```
 MyProject/
   MyProject.sln                 # Solution file
   src/
     App/
-      App.csproj               # Console application project
+      App.csproj               # Console application
       Program.cs               # Main program with sample Add method
   tests/
     App.Tests/
       App.Tests.csproj         # xUnit v3 test project
       UnitTest1.cs             # Sample unit tests
       xunit.runner.json        # xUnit configuration
-  README.md                    # This file
 ```
 
-### Specify Target Framework
-
-You can specify the target framework when creating a project:
+### Framework Options
 
 ```bash
-# Use .NET 10 (default)
+# .NET 10 (default)
 dotnet new console-with-tests -n MyProject
 
-# Use .NET 9
+# .NET 9
 dotnet new console-with-tests -n MyProject --Framework net9.0
 
-# Use .NET 8
+# .NET 8
 dotnet new console-with-tests -n MyProject --Framework net8.0
 ```
 
 ### Build and Test
-
-After creating a project:
 
 ```bash
 cd MyProject
@@ -89,67 +68,28 @@ dotnet build
 dotnet test
 ```
 
-## Template Development
-
-### Updating the Template
-
-1. Make changes to the template files
-2. Rebuild the package: `dotnet pack console-with-tests.csproj`
-3. Uninstall old version: `dotnet new uninstall console-with-tests`
-4. Install new version: `dotnet new install ./nupkg/console-with-tests.1.0.0.nupkg`
-
-### Template Structure
-
-- `.template.config/template.json` - Template configuration
-- `console-with-tests.csproj` - NuGet package project
-- `src/App/` - Console application template
-- `tests/App.Tests/` - Test project template
-- `ProjectName.sln` - Solution file template
-
 ## Requirements
 
-- .NET SDK 8.0 or later (for building the template)
-- .NET 10.0 SDK (for using net10.0 projects)
+- .NET SDK 8.0 or later
+- .NET 10.0 SDK for net10.0 projects (default)
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Quick Start for Contributors
-
-```bash
-# Fork and clone the repository
-git clone https://github.com/mrviduus/ConsoleWithTests.Template.git
-cd ConsoleWithTests.Template
-
-# Install and test locally
-dotnet new install .
-dotnet new console-with-tests -n TestProject
-cd TestProject
-dotnet build
-dotnet test
-```
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
 ## Security
 
-Found a security issue? Please see our [Security Policy](SECURITY.md) for reporting procedures.
+Found a security issue? See [SECURITY.md](SECURITY.md) for reporting procedures.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Built with ❤️ by the open-source community
-- Inspired by best practices from the .NET Foundation
-- Uses xUnit v3 for modern testing capabilities
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## Support
 
-- 📖 [Documentation](https://github.com/mrviduus/ConsoleWithTests.Template/wiki)
 - 🐛 [Report Issues](https://github.com/mrviduus/ConsoleWithTests.Template/issues)
 - 💬 [Discussions](https://github.com/mrviduus/ConsoleWithTests.Template/discussions)
-- 📧 Contact: [your-email@example.com]
+- 📖 [Wiki](https://github.com/mrviduus/ConsoleWithTests.Template/wiki)
 
 ---
 
