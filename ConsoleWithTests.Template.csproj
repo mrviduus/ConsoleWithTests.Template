@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <PackageType>Template</PackageType>
+    <PackageId>ConsoleWithTests.Template</PackageId>
+    <Version>1.0.0</Version>
+    <Title>Console App with xUnit v3 Tests Template</Title>
+    <Authors>ConsoleWithTests Contributors</Authors>
+    <Company>Open Source Community</Company>
+    <Description>A production-ready .NET template that creates a console application with xUnit v3 test project. Includes solution structure, best practices, and comprehensive testing setup.</Description>
+    <PackageTags>dotnet;template;console;xunit;testing;tdd;unittest;xunit3;solution</PackageTags>
+    <PackageProjectUrl>https://github.com/mrviduus/ConsoleWithTests.Template</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/mrviduus/ConsoleWithTests.Template</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>
+      v1.0.0: Initial release
+      - Console app with xUnit v3 tests
+      - .NET 10, 9, and 8 support
+      - Clean solution structure
+      - Best practices included
+    </PackageReleaseNotes>
+    <Copyright>Copyright (c) 2024 ConsoleWithTests Contributors</Copyright>
+    <RequireLicenseAcceptance>false</RequireLicenseAcceptance>
+    <PackageOutputPath>nupkg</PackageOutputPath>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <NoWarn>NU5128;NU5104</NoWarn>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+    <MinClientVersion>5.0</MinClientVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="**/*" Pack="true" PackagePath="content/"
+             Exclude="bin/**;obj/**;nupkg/**;*.nupkg;.git/**;.vs/**;.idea/**;*.user;.DS_Store;test-output/**;test-*/**;artifacts/**" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="LICENSE" Pack="true" PackagePath="" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput)</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+</Project>
