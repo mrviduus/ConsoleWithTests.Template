@@ -54,14 +54,14 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
    cd ConsoleWithTests.Template
    ```
 
-2. Build the template:
+2. Build the NuGet package:
    ```bash
-   dotnet pack
+   dotnet pack console-with-tests.csproj -o ./nupkg
    ```
 
 3. Install locally for testing:
    ```bash
-   dotnet new install ./nupkg/ConsoleWithTests.Template.1.0.0.nupkg
+   dotnet new install ./nupkg/console-with-tests.1.0.0.nupkg
    ```
 
 4. Test the template:
@@ -88,7 +88,7 @@ ConsoleWithTests.Template/
 │       ├── UnitTest1.cs
 │       └── xunit.runner.json
 ├── ProjectName.sln             # Solution file template
-├── ConsoleWithTests.Template.csproj  # NuGet package project
+├── console-with-tests.csproj  # NuGet package project
 └── README.md                   # Documentation
 ```
 

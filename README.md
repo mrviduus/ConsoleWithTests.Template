@@ -1,7 +1,7 @@
 # Console App with xUnit v3 Tests Template
 
-[![NuGet Version](https://img.shields.io/nuget/v/ConsoleWithTests.Template)](https://www.nuget.org/packages/ConsoleWithTests.Template/)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/ConsoleWithTests.Template)](https://www.nuget.org/packages/ConsoleWithTests.Template/)
+[![NuGet Version](https://img.shields.io/nuget/v/console-with-tests)](https://www.nuget.org/packages/console-with-tests/)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/console-with-tests)](https://www.nuget.org/packages/console-with-tests/)
 [![License](https://img.shields.io/github/license/mrviduus/ConsoleWithTests.Template)](LICENSE)
 [![CI/CD](https://github.com/mrviduus/ConsoleWithTests.Template/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/mrviduus/ConsoleWithTests.Template/actions)
 [![.NET](https://img.shields.io/badge/.NET-10%20%7C%209%20%7C%208-512BD4)](https://dotnet.microsoft.com/)
@@ -20,6 +20,12 @@ A production-ready .NET template that creates a console application with xUnit v
 
 ## Installation
 
+### Install from NuGet (Recommended)
+
+```bash
+dotnet new install console-with-tests
+```
+
 ### Install from GitHub
 
 1. **Clone and install locally:**
@@ -28,9 +34,9 @@ A production-ready .NET template that creates a console application with xUnit v
    dotnet new install ./ConsoleWithTests.Template
    ```
 
-2. **Or install directly from GitHub:**
+2. **Or install directly from GitHub release:**
    ```bash
-   dotnet new install mrviduus/ConsoleWithTests.Template
+   dotnet new install mrviduus/ConsoleWithTests.Template::main
    ```
 
 ## Usage
@@ -88,25 +94,17 @@ dotnet test
 ### Updating the Template
 
 1. Make changes to the template files
-2. Rebuild the package: `dotnet pack`
-3. Uninstall old version: `dotnet new uninstall ConsoleWithTests.Template`
-4. Install new version: `dotnet new install ./nupkg/ConsoleWithTests.Template.1.0.0.nupkg`
+2. Rebuild the package: `dotnet pack console-with-tests.csproj`
+3. Uninstall old version: `dotnet new uninstall console-with-tests`
+4. Install new version: `dotnet new install ./nupkg/console-with-tests.1.0.0.nupkg`
 
 ### Template Structure
 
 - `.template.config/template.json` - Template configuration
-- `ConsoleWithTests.Template.csproj` - NuGet package project
+- `console-with-tests.csproj` - NuGet package project
 - `src/App/` - Console application template
 - `tests/App.Tests/` - Test project template
 - `ProjectName.sln` - Solution file template
-
-## Docker Support
-
-Build and validate the template using Docker:
-
-```bash
-docker build -t console-with-tests-template .
-```
 
 ## Requirements
 
