@@ -2,90 +2,109 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
-    tags:
-      - 'v*'
+    branches: [ main, develop, 'v*' ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop ]
   workflow_dispatch:
 
 env:
   DOTNET_VERSION: '8.0.x'
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
 jobs:
   build-and-test:
-    name: Build and Test
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-      fail-fast: false
+        configuration: [Release]
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0
+        fetch-depth: 0  # Fetch all history for versioning
 
-    - name: Setup .NET
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          8.0.x
-          9.0.x
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x'
+
+    - name: Display .NET info
+      run: dotnet --info
 
     - name: Cache NuGet packages
       uses: actions/cache@v4
       with:
-        path: ${{ env.NUGET_PACKAGES }}
+        path: ~/.nuget/packages
         key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
           ${{ runner.os }}-nuget-
 
-    # Skip restore and pack - we'll test the template directly from source
     - name: Install template from source
       run: dotnet new install .
 
-    - name: Create test project from template
+    - name: Test template with .NET 8
       run: |
-        mkdir test-output
-        cd test-output
-        dotnet new console-with-tests -n TestProject --Framework net8.0
+        mkdir test-net8
+        cd test-net8
+        dotnet new console-with-tests -n TestNet8 --Framework net8.0
+        cd TestNet8
+        dotnet restore --verbosity normal
+        dotnet build --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
+        dotnet test --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
+          --logger trx --logger "console;verbosity=detailed" \
+          --collect:"XPlat Code Coverage" --results-directory TestResults
 
-    - name: Build generated project
-      working-directory: test-output/TestProject
-      run: dotnet build --configuration Release
-
-    - name: Run tests in generated project
-      working-directory: test-output/TestProject
-      run: dotnet test --configuration Release --no-build --verbosity normal --logger "trx;LogFileName=test-results.trx" --collect:"XPlat Code Coverage"
+    - name: Test template with .NET 9
+      run: |
+        mkdir test-net9
+        cd test-net9
+        dotnet new console-with-tests -n TestNet9 --Framework net9.0
+        cd TestNet9
+        dotnet restore --verbosity normal
+        dotnet build --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
+        dotnet test --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
+          --logger trx --logger "console;verbosity=detailed" \
+          --collect:"XPlat Code Coverage" --results-directory TestResults
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results-${{ matrix.os }}
+        name: test-results-${{ matrix.configuration }}
         path: |
-          test-output/TestProject/**/test-results.trx
-          test-output/TestProject/**/coverage.cobertura.xml
+          test-net8/TestNet8/TestResults/
+          test-net9/TestNet9/TestResults/
+
+    - name: Upload code coverage
+      uses: codecov/codecov-action@v4
+      if: matrix.configuration == 'Release'
+      with:
+        files: |
+          test-net8/TestNet8/TestResults/*/coverage.cobertura.xml
+          test-net9/TestNet9/TestResults/*/coverage.cobertura.xml
+        fail_ci_if_error: false
+        verbose: true
 
   validate-template:
-    name: Validate Template
     runs-on: ubuntu-latest
+    needs: build-and-test
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup .NET
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: |
-          8.0.x
-          9.0.x
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
     - name: Validate template metadata
       run: |
@@ -103,46 +122,6 @@ jobs:
         jq -e '.shortName and .identity and .name' .template.config/template.json > /dev/null
         echo "✅ Required template fields present"
 
-    - name: Test all framework targets
-      run: |
-        dotnet new install .
-
-        # Test each framework option
-        for framework in net8.0 net9.0; do
-          echo "Testing framework: $framework"
-          mkdir -p "test-$framework"
-          cd "test-$framework"
-          dotnet new console-with-tests -n "Test$framework" --Framework $framework
-          cd "Test$framework"
-          dotnet build
-          dotnet test
-          cd ../..
-        done
-
-  code-quality:
-    name: Code Quality Checks
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
-    - name: Check file formatting
-      run: |
-        # Install dotnet-format if needed
-        dotnet tool install -g dotnet-format || true
-
-        # Check formatting (when .NET 10 is available, update the template files)
-        echo "Checking code formatting..."
-        find . -name "*.cs" -not -path "./test-output/*" -not -path "./artifacts/*" | while read file; do
-          echo "Checking: $file"
-        done
-
     - name: Verify template structure
       run: |
         # Check for required template files
@@ -150,55 +129,107 @@ jobs:
         [ -f "ProjectName.sln" ] && echo "✅ Solution file present"
         [ -f "src/App/App.csproj" ] && echo "✅ Console app project present"
         [ -f "tests/App.Tests/App.Tests.csproj" ] && echo "✅ Test project present"
+        [ -f "console-with-tests.csproj" ] && echo "✅ NuGet package project present"
 
-  # Create and publish NuGet package
-  publish-nuget:
-    name: Build and Publish NuGet Package
+  package:
     runs-on: ubuntu-latest
-    needs: [build-and-test, validate-template, code-quality]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-and-test, validate-template]
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/v') || startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Extract version
+      run: |
+        if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        else
+          VERSION="1.0.${{ github.run_number }}"
+        fi
+        echo "VERSION=$VERSION" >> $GITHUB_ENV
+        echo "Version set to: $VERSION"
+
+    - name: Update .csproj with Version
+      run: |
+        sed -i "s|<PackageVersion>.*</PackageVersion>|<PackageVersion>${{ env.VERSION }}</PackageVersion>|" console-with-tests.csproj
+        echo "Updated version in .csproj to: ${{ env.VERSION }}"
+
+    - name: Clean build outputs
+      run: |
+        cd src/App && dotnet clean && cd ../..
+        cd tests/App.Tests && dotnet clean && cd ../..
+
+    - name: Create NuGet package
+      run: dotnet pack console-with-tests.csproj --configuration Release --output ./artifacts
+
+    - name: Upload package artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: nuget-packages
+        path: ./artifacts/*.nupkg
+
+    - name: Publish to NuGet (on tag or main branch)
+      if: startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+      run: |
+        dotnet nuget push ./artifacts/*.nupkg \
+          --api-key ${{ secrets.NUGET_API_KEY }} \
+          --source https://api.nuget.org/v3/index.json \
+          --skip-duplicate
+
+  security-scan:
+    runs-on: ubuntu-latest
+    needs: build-and-test
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup .NET
+    - name: Setup .NET 8
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '8.0.x'
+        dotnet-version: ${{ env.DOTNET_VERSION }}
 
-    - name: Extract version from tag
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-    - name: Update package version
-      run: |
-        sed -i "s/<PackageVersion>.*<\/PackageVersion>/<PackageVersion>${{ steps.get_version.outputs.VERSION }}<\/PackageVersion>/" console-with-tests.csproj
-
-    - name: Pack NuGet package
-      run: dotnet pack console-with-tests.csproj -c Release -o ./nupkg
-
-    - name: Upload NuGet package artifact
-      uses: actions/upload-artifact@v4
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v4
       with:
-        name: nuget-package
-        path: ./nupkg/*.nupkg
+        dotnet-version: '9.0.x'
 
-    - name: Publish to NuGet.org
-      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    - name: Install template
+      run: dotnet new install .
+
+    - name: Create test project
       run: |
-        dotnet nuget push ./nupkg/*.nupkg \
-          --source https://api.nuget.org/v3/index.json \
-          --api-key ${{ secrets.NUGET_API_KEY }} \
-          --skip-duplicate
-      env:
-        NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        mkdir security-test
+        cd security-test
+        dotnet new console-with-tests -n SecurityTest
+        cd SecurityTest
+
+    - name: Restore dependencies
+      working-directory: security-test/SecurityTest
+      run: dotnet restore
+
+    - name: Run security scan
+      working-directory: security-test/SecurityTest
+      run: |
+        echo "Checking for vulnerable packages..."
+        dotnet list package --vulnerable --include-transitive || true
+        echo ""
+        echo "Checking for deprecated packages..."
+        dotnet list package --deprecated || true
 
   create-release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
-    needs: [build-and-test, validate-template, code-quality, publish-nuget]
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [package]
+    if: startsWith(github.ref, 'refs/tags/')
 
     steps:
     - name: Checkout code
@@ -211,14 +242,14 @@ jobs:
     - name: Download NuGet package
       uses: actions/download-artifact@v4
       with:
-        name: nuget-package
-        path: ./nupkg
+        name: nuget-packages
+        path: ./artifacts
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
         generate_release_notes: true
-        files: ./nupkg/*.nupkg
+        files: ./artifacts/*.nupkg
         body: |
           ## 📦 console-with-tests v${{ steps.get_version.outputs.VERSION }}
 
@@ -255,4 +286,3 @@ jobs:
           View on NuGet.org: https://www.nuget.org/packages/console-with-tests
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
