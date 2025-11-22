@@ -45,14 +45,9 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-nuget-
 
-    - name: Restore dependencies
-      run: dotnet restore ConsoleWithTests.Template.csproj
-
-    - name: Build template package
-      run: dotnet pack ConsoleWithTests.Template.csproj --configuration Release --no-restore --output ./artifacts
-
-    - name: Install template locally
-      run: dotnet new install ./artifacts/ConsoleWithTests.Template.1.0.0.nupkg
+    # Skip restore and pack - we'll test the template directly from source
+    - name: Install template from source
+      run: dotnet new install .
 
     - name: Create test project from template
       run: |
@@ -77,16 +72,9 @@ jobs:
           test-output/TestProject/**/test-results.trx
           test-output/TestProject/**/coverage.cobertura.xml
 
-    - name: Upload package artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: nuget-package-${{ matrix.os }}
-        path: ./artifacts/*.nupkg
-
   validate-template:
     name: Validate Template
     runs-on: ubuntu-latest
-    needs: build-and-test
 
     steps:
     - name: Checkout code
@@ -99,34 +87,25 @@ jobs:
           8.0.x
           9.0.x
 
-    - name: Download artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: nuget-package-ubuntu-latest
-        path: ./artifacts
-
     - name: Validate template metadata
       run: |
-        # Extract and validate template.json
-        unzip -o ./artifacts/ConsoleWithTests.Template.1.0.0.nupkg -d ./extracted
-
         # Check template.json exists and is valid JSON
-        if [ ! -f "./extracted/content/.template.config/template.json" ]; then
+        if [ ! -f ".template.config/template.json" ]; then
           echo "Error: template.json not found!"
           exit 1
         fi
 
         # Validate JSON syntax
-        jq empty ./extracted/content/.template.config/template.json
+        jq empty .template.config/template.json
         echo "✅ Template JSON is valid"
 
         # Check required fields
-        jq -e '.shortName and .identity and .name' ./extracted/content/.template.config/template.json > /dev/null
+        jq -e '.shortName and .identity and .name' .template.config/template.json > /dev/null
         echo "✅ Required template fields present"
 
     - name: Test all framework targets
       run: |
-        dotnet new install ./artifacts/ConsoleWithTests.Template.1.0.0.nupkg
+        dotnet new install .
 
         # Test each framework option
         for framework in net8.0 net9.0; do
@@ -164,16 +143,18 @@ jobs:
           echo "Checking: $file"
         done
 
-    - name: Verify package metadata
+    - name: Verify template structure
       run: |
-        # Check for required package metadata in .csproj
-        grep -q "<PackageId>ConsoleWithTests.Template</PackageId>" ConsoleWithTests.Template.csproj
-        grep -q "<Authors>" ConsoleWithTests.Template.csproj
-        grep -q "<Description>" ConsoleWithTests.Template.csproj
-        echo "✅ Package metadata present"
+        # Check for required template files
+        [ -f ".template.config/template.json" ] && echo "✅ template.json present"
+        [ -f "ProjectName.sln" ] && echo "✅ Solution file present"
+        [ -f "src/App/App.csproj" ] && echo "✅ Console app project present"
+        [ -f "tests/App.Tests/App.Tests.csproj" ] && echo "✅ Test project present"
 
-  publish:
-    name: Publish to NuGet
+  # Since we removed the packaging project, we'll just create a GitHub release
+  # Users can install the template directly from GitHub
+  create-release:
+    name: Create GitHub Release
     runs-on: ubuntu-latest
     needs: [build-and-test, validate-template, code-quality]
     if: startsWith(github.ref, 'refs/tags/v')
@@ -182,47 +163,37 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup .NET
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: 8.0.x
-
     - name: Extract version from tag
       id: get_version
       run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-    - name: Update package version
-      run: |
-        VERSION=${{ steps.get_version.outputs.VERSION }}
-        sed -i "s/<Version>.*<\/Version>/<Version>$VERSION<\/Version>/" ConsoleWithTests.Template.csproj
-
-    - name: Build final package
-      run: dotnet pack ConsoleWithTests.Template.csproj --configuration Release --output ./artifacts
-
-    - name: Push to NuGet
-      run: |
-        dotnet nuget push ./artifacts/ConsoleWithTests.Template.${{ steps.get_version.outputs.VERSION }}.nupkg \
-          --api-key ${{ secrets.NUGET_API_KEY }} \
-          --source https://api.nuget.org/v3/index.json \
-          --skip-duplicate
-
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
       with:
-        files: ./artifacts/*.nupkg
         generate_release_notes: true
         body: |
           ## 📦 ConsoleWithTests.Template v${{ steps.get_version.outputs.VERSION }}
 
-          ### Installation
+          ### Installation from GitHub
           ```bash
-          dotnet new install ConsoleWithTests.Template::${{ steps.get_version.outputs.VERSION }}
+          # Install directly from this GitHub release
+          dotnet new install mrviduus/ConsoleWithTests.Template::v${{ steps.get_version.outputs.VERSION }}
+
+          # Or install from the repository
+          git clone https://github.com/mrviduus/ConsoleWithTests.Template.git
+          dotnet new install ./ConsoleWithTests.Template
           ```
 
           ### Usage
           ```bash
           dotnet new console-with-tests -n MyProject
           ```
+
+          ### What's in this template
+          - Console application with sample code
+          - xUnit v3 test project with examples
+          - Solution file linking both projects
+          - Support for .NET 8, 9, and 10
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

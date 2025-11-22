@@ -20,16 +20,17 @@ A production-ready .NET template that creates a console application with xUnit v
 
 ## Installation
 
-### Build and Install the Template
+### Install from GitHub
 
-1. **Build the template package:**
+1. **Clone and install locally:**
    ```bash
-   dotnet pack
+   git clone https://github.com/mrviduus/ConsoleWithTests.Template.git
+   dotnet new install ./ConsoleWithTests.Template
    ```
 
-2. **Install the template:**
+2. **Or install directly from GitHub:**
    ```bash
-   dotnet new install ./nupkg/ConsoleWithTests.Template.1.0.0.nupkg
+   dotnet new install mrviduus/ConsoleWithTests.Template
    ```
 
 ## Usage
@@ -123,14 +124,12 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 git clone https://github.com/mrviduus/ConsoleWithTests.Template.git
 cd ConsoleWithTests.Template
 
-# Build and test locally
-dotnet pack
-dotnet new install ./nupkg/ConsoleWithTests.Template.1.0.0.nupkg
+# Install and test locally
+dotnet new install .
 dotnet new console-with-tests -n TestProject
-
-# Run validation
-./scripts/validate-template.sh  # On Linux/Mac
-./scripts/validate-template.ps1 # On Windows
+cd TestProject
+dotnet build
+dotnet test
 ```
 
 ## Security
