@@ -36,6 +36,11 @@ jobs:
       with:
         dotnet-version: '9.0.x'
 
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
     - name: Display .NET info
       run: dotnet --info
 
@@ -56,9 +61,9 @@ jobs:
         cd test-net8
         dotnet new console-with-tests -n TestNet8 --Framework net8.0
         cd TestNet8
-        dotnet restore --verbosity normal
-        dotnet build --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
-        dotnet test --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
+        dotnet restore TestNet8.sln --verbosity normal
+        dotnet build TestNet8.sln --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
+        dotnet test TestNet8.sln --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
           --logger trx --logger "console;verbosity=detailed" \
           --collect:"XPlat Code Coverage" --results-directory TestResults
 
@@ -68,9 +73,21 @@ jobs:
         cd test-net9
         dotnet new console-with-tests -n TestNet9 --Framework net9.0
         cd TestNet9
-        dotnet restore --verbosity normal
-        dotnet build --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
-        dotnet test --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
+        dotnet restore TestNet9.sln --verbosity normal
+        dotnet build TestNet9.sln --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
+        dotnet test TestNet9.sln --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
+          --logger trx --logger "console;verbosity=detailed" \
+          --collect:"XPlat Code Coverage" --results-directory TestResults
+
+    - name: Test template with .NET 10 (default)
+      run: |
+        mkdir test-net10
+        cd test-net10
+        dotnet new console-with-tests -n TestNet10
+        cd TestNet10
+        dotnet restore TestNet10.sln --verbosity normal
+        dotnet build TestNet10.sln --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
+        dotnet test TestNet10.sln --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
           --logger trx --logger "console;verbosity=detailed" \
           --collect:"XPlat Code Coverage" --results-directory TestResults
 
@@ -82,6 +99,7 @@ jobs:
         path: |
           test-net8/TestNet8/TestResults/
           test-net9/TestNet9/TestResults/
+          test-net10/TestNet10/TestResults/
 
     - name: Upload code coverage
       uses: codecov/codecov-action@v4
@@ -90,6 +108,7 @@ jobs:
         files: |
           test-net8/TestNet8/TestResults/*/coverage.cobertura.xml
           test-net9/TestNet9/TestResults/*/coverage.cobertura.xml
+          test-net10/TestNet10/TestResults/*/coverage.cobertura.xml
         fail_ci_if_error: false
         verbose: true
 
@@ -202,6 +221,11 @@ jobs:
       with:
         dotnet-version: '9.0.x'
 
+    - name: Setup .NET 10
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
     - name: Install template
       run: dotnet new install .
 
@@ -214,16 +238,16 @@ jobs:
 
     - name: Restore dependencies
       working-directory: security-test/SecurityTest
-      run: dotnet restore
+      run: dotnet restore SecurityTest.sln
 
     - name: Run security scan
       working-directory: security-test/SecurityTest
       run: |
         echo "Checking for vulnerable packages..."
-        dotnet list package --vulnerable --include-transitive || true
+        dotnet list SecurityTest.sln package --vulnerable --include-transitive || true
         echo ""
         echo "Checking for deprecated packages..."
-        dotnet list package --deprecated || true
+        dotnet list SecurityTest.sln package --deprecated || true
 
   create-release:
     name: Create GitHub Release
