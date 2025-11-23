@@ -1,9 +1,8 @@
 using Xunit;
-using App;
 
 namespace App.Tests;
 
-public class UnitTest1
+public class ProgramTests
 {
     [Fact]
     public void Test_Add_Returns_Correct_Sum()
