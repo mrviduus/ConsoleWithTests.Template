@@ -250,12 +250,18 @@ jobs:
             echo "PR already exists (#$EXISTING_PR), updating it..."
             gh pr edit "$EXISTING_PR" --body "$PR_BODY"
           else
-            gh pr create \
+            # Create PR without labels first
+            PR_NUMBER=$(gh pr create \
               --title "🔄 Update NuGet Packages ($(date +%Y-%m-%d))" \
               --body "$PR_BODY" \
               --base main \
-              --head "${{ env.branch }}" \
-              --label "dependencies,automated"
+              --head "${{ env.branch }}" | grep -oE '[0-9]+$')
+
+            echo "Created PR #$PR_NUMBER"
+
+            # Try to add labels if they exist (ignore errors)
+            gh pr edit "$PR_NUMBER" --add-label "dependencies" 2>/dev/null || echo "Label 'dependencies' not found, skipping"
+            gh pr edit "$PR_NUMBER" --add-label "automated" 2>/dev/null || echo "Label 'automated' not found, skipping"
           fi
 
       - name: No updates needed
