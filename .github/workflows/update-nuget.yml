@@ -1,0 +1,263 @@
+# Automated NuGet Package Updates
+#
+# This workflow automatically checks for and updates outdated NuGet packages.
+# Runs every Tuesday at 9 AM UTC
+#
+# The workflow will:
+# 1. Check for outdated packages in the template projects
+# 2. Update packages to their latest versions
+# 3. Create a PR with detailed update information
+#
+# This ensures packages stay up-to-date in the template.
+
+name: Update NuGet Packages
+
+on:
+  schedule:
+    - cron: '0 9 * * 2'  # Every Tuesday at 9 AM UTC
+  workflow_dispatch:      # Allow manual triggering
+
+env:
+  DOTNET_VERSION: '8.0.x'
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  update-packages:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Setup .NET 9
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x'
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Install dotnet-outdated-tool
+        run: |
+          dotnet tool install --global dotnet-outdated-tool || dotnet tool update --global dotnet-outdated-tool
+
+      - name: Check for outdated packages
+        id: check-outdated
+        run: |
+          echo "Checking for outdated NuGet packages..."
+
+          # Check both projects
+          echo "=== Console App Project ===" > /tmp/outdated-full.txt
+          dotnet-outdated src/App/App.csproj >> /tmp/outdated-full.txt 2>&1 || true
+          echo "" >> /tmp/outdated-full.txt
+          echo "=== Test Project ===" >> /tmp/outdated-full.txt
+          dotnet-outdated tests/App.Tests/App.Tests.csproj >> /tmp/outdated-full.txt 2>&1 || true
+
+          cat /tmp/outdated-full.txt
+
+          # Check if any updates are available
+          if grep -q "No outdated dependencies" /tmp/outdated-full.txt && ! grep -q "\->" /tmp/outdated-full.txt; then
+            echo "ℹ️ No updates found - all packages are up to date"
+            echo "updates_available=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Updates available!"
+            echo "updates_available=true" >> $GITHUB_OUTPUT
+
+            # Save output for PR body
+            echo "OUTDATED_OUTPUT<<EOF" >> $GITHUB_ENV
+            cat /tmp/outdated-full.txt >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          fi
+
+      - name: Create update branch
+        if: steps.check-outdated.outputs.updates_available == 'true'
+        run: |
+          BRANCH_NAME="nuget-updates-$(date +%Y%m%d)"
+
+          # Fetch all branches
+          git fetch origin
+
+          # Check if branch exists
+          if git ls-remote --heads origin "$BRANCH_NAME" | grep -q "$BRANCH_NAME"; then
+            echo "Branch $BRANCH_NAME already exists, checking it out..."
+            git checkout -B "$BRANCH_NAME" "origin/$BRANCH_NAME"
+            git reset --hard origin/main
+          else
+            echo "Creating new branch $BRANCH_NAME..."
+            git checkout -b "$BRANCH_NAME"
+          fi
+
+          echo "branch=$BRANCH_NAME" >> $GITHUB_ENV
+
+      - name: Update packages
+        if: steps.check-outdated.outputs.updates_available == 'true'
+        id: update
+        run: |
+          echo "Updating packages to latest versions..."
+
+          # Update packages in both projects
+          echo "Updating Console App packages..."
+          dotnet-outdated src/App/App.csproj --upgrade --include-auto-referenced || true
+
+          echo "Updating Test Project packages..."
+          dotnet-outdated tests/App.Tests/App.Tests.csproj --upgrade --include-auto-referenced || true
+
+          # Restore to verify updates
+          echo "Verifying package restore..."
+          dotnet restore ProjectName.sln
+
+          # Quick build check
+          echo "Quick build verification..."
+          dotnet build ProjectName.sln --no-restore --configuration Release || {
+            echo "⚠️ Build failed with updated packages"
+            echo "build_failed=true" >> $GITHUB_OUTPUT
+          }
+
+          # Get post-update status
+          echo "=== Post-Update Status ===" > /tmp/post-update.txt
+          echo "Console App:" >> /tmp/post-update.txt
+          dotnet-outdated src/App/App.csproj >> /tmp/post-update.txt 2>&1 || true
+          echo "" >> /tmp/post-update.txt
+          echo "Test Project:" >> /tmp/post-update.txt
+          dotnet-outdated tests/App.Tests/App.Tests.csproj >> /tmp/post-update.txt 2>&1 || true
+
+          echo "POST_UPDATE_CHECK<<EOF" >> $GITHUB_ENV
+          cat /tmp/post-update.txt >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Run tests
+        if: steps.check-outdated.outputs.updates_available == 'true'
+        id: test
+        run: |
+          echo "Running tests with updated packages..."
+          dotnet test ProjectName.sln --configuration Release --logger "trx;LogFileName=test-results.trx" || {
+            echo "⚠️ Tests failed with updated packages"
+            echo "tests_failed=true" >> $GITHUB_OUTPUT
+          }
+
+      - name: Configure Git
+        if: steps.check-outdated.outputs.updates_available == 'true'
+        run: |
+          git config user.name "NuGet Update Bot"
+          git config user.email "nuget-bot@github-actions"
+
+      - name: Commit changes
+        if: steps.check-outdated.outputs.updates_available == 'true'
+        id: commit
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            COMMIT_MSG="chore: update NuGet packages
+
+Automated NuGet package updates by NuGet Update Bot
+
+Updated packages in:
+- src/App/App.csproj
+- tests/App.Tests/App.Tests.csproj
+
+Generated on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
+
+            git commit -m "$COMMIT_MSG"
+            git push --force-with-lease origin "${{ env.branch }}"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.check-outdated.outputs.updates_available == 'true' && steps.commit.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Prepare status messages
+          BUILD_STATUS="✅ Build successful"
+          TEST_STATUS="✅ Tests passed"
+
+          if [ "${{ steps.update.outputs.build_failed }}" == "true" ]; then
+            BUILD_STATUS="⚠️ Build failed - manual review required"
+          fi
+
+          if [ "${{ steps.test.outputs.tests_failed }}" == "true" ]; then
+            TEST_STATUS="⚠️ Tests failed - manual review required"
+          fi
+
+          # Create PR body
+          PR_BODY="## 🔄 NuGet Package Updates
+
+This PR contains automatic NuGet package updates for the ConsoleWithTests.Template.
+
+### 📊 Status
+- **Build**: $BUILD_STATUS
+- **Tests**: $TEST_STATUS
+- **Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+
+### 📦 Package Updates
+
+**Before Update:**
+\`\`\`
+${{ env.OUTDATED_OUTPUT }}
+\`\`\`
+
+**After Update:**
+\`\`\`
+${{ env.POST_UPDATE_CHECK }}
+\`\`\`
+
+### 🧪 Automated Checks
+The following checks will run automatically:
+- ✅ Build validation
+- ✅ Unit test execution
+- ✅ Template validation
+- ✅ Security vulnerability scan
+
+### ✅ Review Checklist
+Please verify before merging:
+- [ ] All CI/CD checks pass
+- [ ] No breaking changes for template users
+- [ ] xUnit v3 packages are compatible
+- [ ] Template still generates correctly
+
+### 📋 Important Notes
+- This template supports .NET 8, 9, and 10
+- xUnit v3 is in preview - review changes carefully
+- Check that generated projects still build and test correctly
+
+---
+🤖 This PR was automatically created by the NuGet Update Bot.
+Schedule: Every Tuesday at 9 AM UTC"
+
+          # Check if PR already exists
+          EXISTING_PR=$(gh pr list --head "${{ env.branch }}" --json number --jq '.[0].number' || echo "")
+
+          if [ -n "$EXISTING_PR" ]; then
+            echo "PR already exists (#$EXISTING_PR), updating it..."
+            gh pr edit "$EXISTING_PR" --body "$PR_BODY"
+          else
+            gh pr create \
+              --title "🔄 Update NuGet Packages ($(date +%Y-%m-%d))" \
+              --body "$PR_BODY" \
+              --base main \
+              --head "${{ env.branch }}" \
+              --label "dependencies,automated"
+          fi
+
+      - name: No updates needed
+        if: steps.check-outdated.outputs.updates_available == 'false'
+        run: |
+          echo "✅ All packages are up to date!"
+          echo "No action needed - packages are current."
