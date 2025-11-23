@@ -194,27 +194,27 @@ jobs:
             TEST_STATUS="⚠️ Tests failed - manual review required"
           fi
 
-          # Create PR body file
-          cat > /tmp/pr-body.md << 'PREOF'
+          # Create PR body dynamically
+          cat > /tmp/pr-body.md << EOF
           ## 🔄 NuGet Package Updates
 
           This PR contains automatic NuGet package updates for the ConsoleWithTests.Template.
 
           ### 📊 Status
-          - **Build**: BUILD_STATUS_PLACEHOLDER
-          - **Tests**: TEST_STATUS_PLACEHOLDER
-          - **Date**: DATE_PLACEHOLDER
+          - **Build**: ${BUILD_STATUS}
+          - **Tests**: ${TEST_STATUS}
+          - **Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
 
           ### 📦 Package Updates
 
           **Before Update:**
           \`\`\`
-          OUTDATED_OUTPUT_PLACEHOLDER
+          ${OUTDATED_OUTPUT}
           \`\`\`
 
           **After Update:**
           \`\`\`
-          POST_UPDATE_CHECK_PLACEHOLDER
+          ${POST_UPDATE_CHECK}
           \`\`\`
 
           ### 🧪 Automated Checks
@@ -239,14 +239,7 @@ jobs:
           ---
           🤖 This PR was automatically created by the NuGet Update Bot.
           Schedule: Every Tuesday at 9 AM UTC
-          PREOF
-
-          # Replace placeholders with actual values
-          sed -i.bak "s|BUILD_STATUS_PLACEHOLDER|${BUILD_STATUS}|g" /tmp/pr-body.md
-          sed -i.bak "s|TEST_STATUS_PLACEHOLDER|${TEST_STATUS}|g" /tmp/pr-body.md
-          sed -i.bak "s|DATE_PLACEHOLDER|$(date -u +'%Y-%m-%d %H:%M:%S UTC')|g" /tmp/pr-body.md
-          sed -i.bak "s|OUTDATED_OUTPUT_PLACEHOLDER|${OUTDATED_OUTPUT}|g" /tmp/pr-body.md
-          sed -i.bak "s|POST_UPDATE_CHECK_PLACEHOLDER|${POST_UPDATE_CHECK}|g" /tmp/pr-body.md
+          EOF
 
           PR_BODY=$(cat /tmp/pr-body.md)
 
