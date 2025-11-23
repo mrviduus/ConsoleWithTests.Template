@@ -195,7 +195,8 @@ jobs:
           fi
 
           # Create PR body
-          PR_BODY="## 🔄 NuGet Package Updates
+          PR_BODY=$(cat <<EOF
+## 🔄 NuGet Package Updates
 
 This PR contains automatic NuGet package updates for the ConsoleWithTests.Template.
 
@@ -207,14 +208,14 @@ This PR contains automatic NuGet package updates for the ConsoleWithTests.Templa
 ### 📦 Package Updates
 
 **Before Update:**
-\`\`\`
+```
 ${{ env.OUTDATED_OUTPUT }}
-\`\`\`
+```
 
 **After Update:**
-\`\`\`
+```
 ${{ env.POST_UPDATE_CHECK }}
-\`\`\`
+```
 
 ### 🧪 Automated Checks
 The following checks will run automatically:
@@ -237,7 +238,9 @@ Please verify before merging:
 
 ---
 🤖 This PR was automatically created by the NuGet Update Bot.
-Schedule: Every Tuesday at 9 AM UTC"
+Schedule: Every Tuesday at 9 AM UTC
+EOF
+          )
 
           # Check if PR already exists
           EXISTING_PR=$(gh pr list --head "${{ env.branch }}" --json number --jq '.[0].number' || echo "")
