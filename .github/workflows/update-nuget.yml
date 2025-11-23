@@ -111,10 +111,10 @@ jobs:
 
           # Update packages in both projects
           echo "Updating Console App packages..."
-          dotnet-outdated src/App/App.csproj --upgrade --include-auto-referenced || true
+          dotnet-outdated src/App/App.csproj --upgrade || true
 
           echo "Updating Test Project packages..."
-          dotnet-outdated tests/App.Tests/App.Tests.csproj --upgrade --include-auto-referenced || true
+          dotnet-outdated tests/App.Tests/App.Tests.csproj --upgrade || true
 
           # Restore to verify updates
           echo "Verifying package restore..."
