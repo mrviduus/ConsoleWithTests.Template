@@ -194,50 +194,61 @@ jobs:
             TEST_STATUS="⚠️ Tests failed - manual review required"
           fi
 
-          # Create PR body with proper escaping
-          PR_BODY="## 🔄 NuGet Package Updates
+          # Create PR body file
+          cat > /tmp/pr-body.md << 'PREOF'
+          ## 🔄 NuGet Package Updates
 
-This PR contains automatic NuGet package updates for the ConsoleWithTests.Template.
+          This PR contains automatic NuGet package updates for the ConsoleWithTests.Template.
 
-### 📊 Status
-- **Build**: $BUILD_STATUS
-- **Tests**: $TEST_STATUS
-- **Date**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          ### 📊 Status
+          - **Build**: BUILD_STATUS_PLACEHOLDER
+          - **Tests**: TEST_STATUS_PLACEHOLDER
+          - **Date**: DATE_PLACEHOLDER
 
-### 📦 Package Updates
+          ### 📦 Package Updates
 
-**Before Update:**
-\`\`\`
-${OUTDATED_OUTPUT}
-\`\`\`
+          **Before Update:**
+          \`\`\`
+          OUTDATED_OUTPUT_PLACEHOLDER
+          \`\`\`
 
-**After Update:**
-\`\`\`
-${POST_UPDATE_CHECK}
-\`\`\`
+          **After Update:**
+          \`\`\`
+          POST_UPDATE_CHECK_PLACEHOLDER
+          \`\`\`
 
-### 🧪 Automated Checks
-The following checks will run automatically:
-- ✅ Build validation
-- ✅ Unit test execution
-- ✅ Template validation
-- ✅ Security vulnerability scan
+          ### 🧪 Automated Checks
+          The following checks will run automatically:
+          - ✅ Build validation
+          - ✅ Unit test execution
+          - ✅ Template validation
+          - ✅ Security vulnerability scan
 
-### ✅ Review Checklist
-Please verify before merging:
-- [ ] All CI/CD checks pass
-- [ ] No breaking changes for template users
-- [ ] xUnit v3 packages are compatible
-- [ ] Template still generates correctly
+          ### ✅ Review Checklist
+          Please verify before merging:
+          - [ ] All CI/CD checks pass
+          - [ ] No breaking changes for template users
+          - [ ] xUnit v3 packages are compatible
+          - [ ] Template still generates correctly
 
-### 📋 Important Notes
-- This template supports .NET 8, 9, and 10
-- xUnit v3 is in preview - review changes carefully
-- Check that generated projects still build and test correctly
+          ### 📋 Important Notes
+          - This template supports .NET 8, 9, and 10
+          - xUnit v3 is in preview - review changes carefully
+          - Check that generated projects still build and test correctly
 
----
-🤖 This PR was automatically created by the NuGet Update Bot.
-Schedule: Every Tuesday at 9 AM UTC"
+          ---
+          🤖 This PR was automatically created by the NuGet Update Bot.
+          Schedule: Every Tuesday at 9 AM UTC
+          PREOF
+
+          # Replace placeholders with actual values
+          sed -i.bak "s|BUILD_STATUS_PLACEHOLDER|${BUILD_STATUS}|g" /tmp/pr-body.md
+          sed -i.bak "s|TEST_STATUS_PLACEHOLDER|${TEST_STATUS}|g" /tmp/pr-body.md
+          sed -i.bak "s|DATE_PLACEHOLDER|$(date -u +'%Y-%m-%d %H:%M:%S UTC')|g" /tmp/pr-body.md
+          sed -i.bak "s|OUTDATED_OUTPUT_PLACEHOLDER|${OUTDATED_OUTPUT}|g" /tmp/pr-body.md
+          sed -i.bak "s|POST_UPDATE_CHECK_PLACEHOLDER|${POST_UPDATE_CHECK}|g" /tmp/pr-body.md
+
+          PR_BODY=$(cat /tmp/pr-body.md)
 
           # Check if PR already exists
           EXISTING_PR=$(gh pr list --head "${{ env.branch }}" --json number --jq '.[0].number' || echo "")
