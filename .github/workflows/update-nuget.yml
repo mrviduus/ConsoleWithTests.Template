@@ -164,17 +164,15 @@ jobs:
             echo "No changes to commit"
             echo "has_changes=false" >> $GITHUB_OUTPUT
           else
-            COMMIT_MSG="chore: update NuGet packages
+            git commit -m "chore: update NuGet packages
 
-Automated NuGet package updates by NuGet Update Bot
+          Automated NuGet package updates by NuGet Update Bot
 
-Updated packages in:
-- src/App/App.csproj
-- tests/App.Tests/App.Tests.csproj
+          Updated packages in:
+          - src/App/App.csproj
+          - tests/App.Tests/App.Tests.csproj
 
-Generated on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
-
-            git commit -m "$COMMIT_MSG"
+          Generated on: $(date -u +'%Y-%m-%d %H:%M:%S UTC')"
             git push --force-with-lease origin "${{ env.branch }}"
             echo "has_changes=true" >> $GITHUB_OUTPUT
           fi
