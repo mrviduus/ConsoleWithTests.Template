@@ -102,7 +102,7 @@ jobs:
           test-net10/TestNet10/TestResults/
 
     - name: Upload code coverage
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v7
       if: matrix.configuration == 'Release'
       with:
         files: |
