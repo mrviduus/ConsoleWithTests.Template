@@ -243,19 +243,29 @@ jobs:
 
           PR_BODY=$(cat /tmp/pr-body.md)
 
+          # A broken build or a failing test suite must never produce a mergeable PR
+          DRAFT_FLAG=""
+          if [ "${{ steps.update.outputs.build_failed }}" == "true" ] || [ "${{ steps.test.outputs.tests_failed }}" == "true" ]; then
+            DRAFT_FLAG="--draft"
+          fi
+
           # Check if PR already exists
           EXISTING_PR=$(gh pr list --head "${{ env.branch }}" --json number --jq '.[0].number' || echo "")
 
           if [ -n "$EXISTING_PR" ]; then
             echo "PR already exists (#$EXISTING_PR), updating it..."
             gh pr edit "$EXISTING_PR" --body "$PR_BODY"
+            if [ -n "$DRAFT_FLAG" ]; then
+              gh pr ready "$EXISTING_PR" --undo
+            fi
           else
             # Create PR without labels first
             PR_NUMBER=$(gh pr create \
               --title "🔄 Update NuGet Packages ($(date +%Y-%m-%d))" \
               --body "$PR_BODY" \
               --base main \
-              --head "${{ env.branch }}" | grep -oE '[0-9]+$')
+              --head "${{ env.branch }}" \
+              $DRAFT_FLAG | grep -oE '[0-9]+$')
 
             echo "Created PR #$PR_NUMBER"
 
@@ -269,3 +279,11 @@ jobs:
         run: |
           echo "✅ All packages are up to date!"
           echo "No action needed - packages are current."
+
+      - name: Fail the run if the pre-flight build or tests broke
+        # Both checks above only annotated the PR body; without this the job stayed
+        # green and a broken bump could be merged (see LoadSurge PR #27).
+        if: steps.update.outputs.build_failed == 'true' || steps.test.outputs.tests_failed == 'true'
+        run: |
+          echo "::error::Pre-flight build or tests failed with the updated packages. The PR was opened as a draft."
+          exit 1
