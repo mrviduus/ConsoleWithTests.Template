@@ -27,7 +27,8 @@ docker build -t console-with-tests-template .
 ```
 
 ### Generated Project Commands
-When working with projects generated from this template:
+When working with projects generated from this template (`global.json` opts `dotnet test` into
+the Microsoft.Testing.Platform runner, so these are MTP options, not VSTest's):
 ```bash
 # Build the solution
 dotnet build
@@ -36,13 +37,13 @@ dotnet build
 dotnet test
 
 # Run tests with coverage
-dotnet test --collect:"XPlat Code Coverage"
+dotnet test --coverage --coverage-output-format cobertura --results-directory TestResults
 
 # Run the console application
 dotnet run --project src/App/App.csproj
 
 # Run specific test
-dotnet test --filter "FullyQualifiedName~Test_Add_Returns_Correct_Sum"
+dotnet test --filter-method "*Test_Add_Returns_Correct_Sum"
 ```
 
 ## Architecture
