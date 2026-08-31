@@ -63,9 +63,9 @@ jobs:
         cd TestNet8
         dotnet restore TestNet8.sln --verbosity normal
         dotnet build TestNet8.sln --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
-        dotnet test TestNet8.sln --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
-          --logger trx --logger "console;verbosity=detailed" \
-          --collect:"XPlat Code Coverage" --results-directory TestResults
+        dotnet test --solution TestNet8.sln --configuration ${{ matrix.configuration }} --no-build \
+          --output Detailed --report-trx \
+          --coverage --coverage-output-format cobertura --results-directory TestResults
 
     - name: Test template with .NET 9
       run: |
@@ -75,9 +75,9 @@ jobs:
         cd TestNet9
         dotnet restore TestNet9.sln --verbosity normal
         dotnet build TestNet9.sln --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
-        dotnet test TestNet9.sln --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
-          --logger trx --logger "console;verbosity=detailed" \
-          --collect:"XPlat Code Coverage" --results-directory TestResults
+        dotnet test --solution TestNet9.sln --configuration ${{ matrix.configuration }} --no-build \
+          --output Detailed --report-trx \
+          --coverage --coverage-output-format cobertura --results-directory TestResults
 
     - name: Test template with .NET 10 (default)
       run: |
@@ -87,9 +87,9 @@ jobs:
         cd TestNet10
         dotnet restore TestNet10.sln --verbosity normal
         dotnet build TestNet10.sln --configuration ${{ matrix.configuration }} --no-restore --verbosity normal
-        dotnet test TestNet10.sln --configuration ${{ matrix.configuration }} --no-build --verbosity normal \
-          --logger trx --logger "console;verbosity=detailed" \
-          --collect:"XPlat Code Coverage" --results-directory TestResults
+        dotnet test --solution TestNet10.sln --configuration ${{ matrix.configuration }} --no-build \
+          --output Detailed --report-trx \
+          --coverage --coverage-output-format cobertura --results-directory TestResults
 
     - name: Upload test results
       uses: actions/upload-artifact@v4
@@ -106,9 +106,9 @@ jobs:
       if: matrix.configuration == 'Release'
       with:
         files: |
-          test-net8/TestNet8/TestResults/*/coverage.cobertura.xml
-          test-net9/TestNet9/TestResults/*/coverage.cobertura.xml
-          test-net10/TestNet10/TestResults/*/coverage.cobertura.xml
+          test-net8/TestNet8/TestResults/*.cobertura.xml
+          test-net9/TestNet9/TestResults/*.cobertura.xml
+          test-net10/TestNet10/TestResults/*.cobertura.xml
         fail_ci_if_error: false
         verbose: true
 

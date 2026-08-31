@@ -25,6 +25,9 @@
     <Content Include="src\**\*" Exclude="src\**\bin\**;src\**\obj\**" />
     <Content Include="tests\**\*" Exclude="tests\**\bin\**;tests\**\obj\**" />
     <Content Include="ProjectName.sln" />
+    <!-- opts dotnet test into Microsoft.Testing.Platform; without it the generated
+         project cannot run its tests on the .NET 10 SDK -->
+    <Content Include="global.json" />
     <Content Include=".editorconfig" />
     <Content Include=".gitignore" />
     <Content Include="README.md" />
